@@ -26,3 +26,32 @@ SELECT 'women', COUNT(id) as kolvo_likes FROM likes WHERE user_id IN (SELECT use
 
 
 -- Пятое задание 
+SELECT user, total FROM (SELECT id AS user, 0 AS total 
+FROM users 
+ WHERE id NOT IN (SELECT user_id AS user 
+ FROM media 
+  UNION ALL 
+SELECT user_id AS user 
+FROM likes 
+  UNION ALL 
+  SELECT from_user_id AS user 
+  FROM messages
+  ) 
+ UNION 
+ SELECT  user, COUNT(*) AS total 
+FROM 
+     (SELECT user_id AS user 
+    FROM media 
+  UNION ALL 
+  SELECT user_id AS user 
+    FROM likes 
+  UNION ALL 
+  SELECT from_user_id AS user 
+  FROM messages) a GROUP BY user) b 
+ORDER BY total 
+  LIMIT 10;
+ 
+
+ 
+ 
+  
