@@ -1,4 +1,6 @@
 -- БД для сайта https://hd.kinopoisk.ru
+DROP DATABASE IF EXISTS kinopoisk_hd;
+
 CREATE DATABASE kinopoisk_hd;
 
 SHOW DATABASES;
