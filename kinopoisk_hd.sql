@@ -21,7 +21,7 @@ CREATE TABLE users (
 -- Таблица профилей 
 CREATE TABLE profiles (
 	user_id INT UNSIGNED NOT NULL,
-	sex char(1) COLLATE utf8_unicode_ci NOT NULL,
+	sex char(50) COLLATE utf8_unicode_ci NOT NULL,
 	birthday date DEFAULT NULL
 );
 
@@ -31,7 +31,7 @@ CREATE TABLE media (
 	id INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
 	media_name VARCHAR(500) NOT NULL,
 	country VARCHAR(100) NOT NULL,
-	PEGI VARCHAR(50) NOT NULL,
+	PEGI_id INT UNSIGNED NOT NULL,
 	serial_id INT UNSIGNED,
 	created_at DATETIME DEFAULT NOW(),
 	poster_id INT UNSIGNED NOT NULL
