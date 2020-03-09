@@ -2,7 +2,7 @@ import requests
 import getpass
 from pprint import pprint
 import json
-#Первое задание
+#Первое задание!
 url = 'https://api.github.com'
 user='antonbelovalex'
 
