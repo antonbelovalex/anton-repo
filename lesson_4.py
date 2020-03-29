@@ -1,104 +1,142 @@
-from lxml import html
 import requests
-from datetime import datetime
+from lxml import html
 
+def get_html(url):
+  header = {
+    'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.149 Safari/537.36'
+  }
 
-def get_news_lenta_ru():
-    news = []
+  response = requests.get(
+    url,
+    headers = header
+  ).text
 
-    keys = ('title', 'date', 'link')
-    date_format = '%Y-%m-%dT%H:%M:%S%z'
-    link_lenta = 'https://lenta.ru/'
+  return html.fromstring(response)
 
-    request = requests.get(link_lenta)
+#-------------------------------------------------------
+#Парсинг лентару
+from get_html import get_html
 
-    root = html.fromstring(request.text)
-    root.make_links_absolute(link_lenta)
+main_link = 'https://lenta.ru/'
 
-    news_links = root.xpath('''(//section[@class="row b-top7-for-main js-top-seven"]//div[@class="first-item"]/h2 | 
-                                //section[@class="row b-top7-for-main js-top-seven"]//div[@class="item"])
-                                /a/@href''')
+def get_date(url):
+  tree = get_html(url)
+  dates = tree.xpath("//time[@class='g-date']/@datetime")
+  return dates[0] if dates else None
 
-    news_text = root.xpath('''(//section[@class="row b-top7-for-main js-top-seven"]//div[@class="first-item"]/h2 | 
-                                //section[@class="row b-top7-for-main js-top-seven"]//div[@class="item"])
-                                /a/text()''')
+def get_lenta_data(links):
+  output = []
+  for link in links:
+    href = link.xpath('./@href')[0]
+    href = href if href.find('http') != -1 else main_link + href[1:]
 
-    for i in range(len(news_text)):
-        news_text[i] = news_text[i].replace(u'\xa0', u' ')
-
-    news_date = []
-
-    for item in news_links:
-        request = requests.get(item)
-        root = html.fromstring(request.text)
-        date = root.xpath('//time[@itemprop="datePublished"]/@datetime')
-        news_date.extend(date)
-
-    for i in range(len(news_date)):
-        news_date[i] = datetime.strptime(news_date[i], date_format)
-
-    for item in list(zip(news_text, news_date, news_links)):
-        news_dict = {}
-        for key, value in zip(keys, item):
-            news_dict[key] = value
-
-        news_dict['source'] = 'lenta.ru'
-        news.append(news_dict)
-
-    return news
-
-
-def get_news_mail_ru():
-    news = []
-
-    headers = {
-        'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64; rv:69.0) Gecko/20100101 Firefox/69.0'
+    data = {
+      'href': href,
+      'title': link.xpath('./text()')[0],
+      'date': get_date(href),
+      'newsmaker': 'lenta'
     }
 
-    keys = ('title', 'date', 'link')
-    date_format = '%Y-%m-%dT%H:%M:%S%z'
+    output.append(data)
 
-    link_mail_ru = 'https://mail.ru/'
+  return output
+#-------------------------------------------------------
+#Парсинг майл
+from get_html import get_html
 
-    request = requests.get(link_mail_ru, headers=headers)
-    root = html.fromstring(request.text)
+def get_date(url):
+  tree = get_html(url)
+  dates = tree.xpath("//span[@class='note__text breadcrumbs__text js-ago']/@datetime")
+  return dates[0] if dates else None
 
-    news_links = root.xpath('''(//div[@class =  "news-item o-media news-item_media news-item_main"]  |  
-                                //div[@class =  "news-item__inner"])
-                                /a[contains(@href, "news.mail.ru")]/@href''')
+def get_mail_data(links, url):
+  output = []
+  for link in links:
+    href = link.xpath('./@href')[0]
+    href = href if href.find('http') != -1 else url + href[1:]
 
-    news_text = root.xpath('''(//div[@class =  "news-item o-media news-item_media news-item_main"]//h3  |  
-                               //div[@class =  "news-item__inner"]/a[contains(@href, "news.mail.ru")])
-                               /text()''')
+    data = {
+      'href': href,
+      'title': link.xpath('./text()')[0] if link.xpath('./text()') else link.xpath('./span/text()')[0],
+      'datetime': get_date(href),
+      'newsmaker': 'mail'
+    }
 
-    for i in range(len(news_text)):
-        news_text[i] = news_text[i].replace(u'\xa0', u' ')
+    output.append(data)
 
-    news_links_temp = []
-    for item in news_links:
-        item = item.split('/')
-        news_links_temp.append('/'.join(item[0:5]))
+  return output
+#-------------------------------------------------------
+#Парсинг яндекса 
+from get_html import get_html
 
-    news_links = news_links_temp
-    del (news_links_temp)
+main_link = 'https://yandex.ru/'
 
-    news_date = []
+def get_date(url):
+  tree = get_html(url)
+  dates = tree.xpath("//time[@class='g-date']/@datetime")
+  return dates[0] if dates else None
 
-    for item in news_links:
-        request = requests.get(item, headers=headers)
-        root = html.fromstring(request.text)
-        date = root.xpath('//span[@class="note__text breadcrumbs__text js-ago"]/@datetime')
-        news_date.extend(date)
+def get_yandex_data(links):
+  output = []
+  for link in links:
+    href = link.xpath('./@href')[0]
+    href = href if href and href.find('http') != -1 else main_link + href[1:]
 
-    for i in range(len(news_date)):
-        news_date[i] = datetime.strptime(news_date[i], date_format)
+    data = {
+      'href': href,
+      'title': link.xpath('./text()')[0],
+      'datetime': None,
+      'newsmaker': 'yandex'
+    }
 
-    for item in list(zip(news_text, news_date, news_links)):
-        news_dict = {}
-        for key, value in zip(keys, item):
-            news_dict[key] = value
+    output.append(data)
 
-        news_dict['source'] = 'mail.ru'
-        news.append(news_dict)
+  return output
+#-------------------------------------------------------
+#Главная
+from pprint import pprint
 
-    return news
+from HW_03.Mongo import Mongo
+mongo = Mongo('news')
+
+from get_html import get_html
+from get_mail_data import get_mail_data
+from get_lenta_data import get_lenta_data
+from get_yandex_data import get_yandex_data
+
+newsmaker_links = {
+  'mail': 'https://news.mail.ru/',
+  'lenta': 'https://lenta.ru/parts/news/',
+  'yandex': 'https://yandex.ru/news/'
+}
+
+def get_links(html, newsmaker):
+  match = {
+    'mail': "//a[@class='list__text']|//a[contains(@class, 'newsitem__title')]|//a[contains(@class, 'link link_flex')]",
+    'lenta': "//h3/a|//div[@class='item']/a",
+    'yandex': "//h2[@class='story__title']/a"
+  }
+
+  return html.xpath(match[newsmaker])
+
+def get_data(links, newsmaker):
+  result = None
+  if newsmaker == 'mail':
+    result = get_mail_data(links, newsmaker_links[newsmaker])
+  elif newsmaker == 'lenta':
+    result = get_lenta_data(links)
+  elif newsmaker == 'yandex':
+    result = get_yandex_data(links)
+
+  return result
+
+
+result = []
+for key in newsmaker_links:
+  tree = get_html(newsmaker_links[key])
+  links = get_links(tree, key)
+
+  result.extend(get_data(links, key))
+
+mongo.set_many(result)
+pprint(result)
